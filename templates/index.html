@@ -1,19 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Tech Dolph Music</title>
+    <title>Tech Dolph Music Downloader</title>
 </head>
 <body>
-    <h1>Tech Dolph Music</h1>
-    <form method="POST">
+    <h1>Baixe sua música do YouTube</h1>
+    <form action="/download" method="post">
         <input type="text" name="url" placeholder="Cole o link do YouTube" required>
         <button type="submit">Baixar</button>
     </form>
-
-    {% if file_ready %}
-        <p>Download pronto!</p>
-        <a href="{{ url_for('download', filename=filename) }}">Clique aqui para baixar o arquivo</a>
-    {% endif %}
 </body>
 </html>
