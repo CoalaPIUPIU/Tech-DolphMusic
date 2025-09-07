@@ -1,34 +1,36 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, request, send_file, jsonify
 import yt_dlp
 import os
 
 app = Flask(__name__)
+DOWNLOAD_FOLDER = "downloads"
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# garante que a pasta existe
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-@app.route('/download', methods=['POST'])
-def download():
-    url = request.form.get('url')
+@app.route("/download", methods=["POST"])
+def download_song():
+    data = request.json
+    url = data.get("url")
     if not url:
-        return "Erro: Nenhuma URL fornecida.", 400
+        return jsonify({"error": "Nenhuma URL fornecida"}), 400
 
+    # opções do yt-dlp
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
+        'outtmpl': f"{DOWNLOAD_FOLDER}/%(title)s.%(ext)s",
+        'cookiefile': 'cookies.txt',  # <- arquivo que você criou
         'noplaylist': True
     }
 
-    os.makedirs('downloads', exist_ok=True)
-
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
+            info_dict = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info_dict)
+
         return send_file(filename, as_attachment=True)
-    except Exception as e:
-        return f"Erro ao baixar: {str(e)}"
+    except yt_dlp.utils.DownloadError as e:
+        return jsonify({"error": f"Erro ao baixar: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
