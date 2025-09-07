@@ -9,31 +9,33 @@ os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    file_ready = False
+    filename = None
+
     if request.method == "POST":
-        video_url = request.form.get("video_url")
-        if not video_url:
-            return render_template("index.html", error="Insira a URL do vídeo!")
+        url = request.form.get("url")
+        if url:
+            ydl_opts = {
+                "format": "bestaudio/best",
+                "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s"),
+                "quiet": True,
+            }
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info_dict = ydl.extract_info(url, download=True)
+                    filename = ydl.prepare_filename(info_dict)
+                    file_ready = True
+            except Exception as e:
+                return f"Erro ao baixar: {e}"
 
-        # Configuração do yt-dlp
-        ydl_opts = {
-            "outtmpl": os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s"),
-            "format": "bestaudio/best",
-            "quiet": True,
-            "noplaylist": True,
-            "ignoreerrors": True,  # evita erro em vídeos que precisam login
-        }
+    return render_template("index.html", file_ready=file_ready, filename=filename)
 
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info_dict = ydl.extract_info(video_url, download=True)
-                if info_dict is None:
-                    return render_template("index.html", error="Não foi possível baixar o vídeo.")
-                filename = ydl.prepare_filename(info_dict)
-                return send_file(filename, as_attachment=True)
-        except Exception as e:
-            return render_template("index.html", error=f"Erro: {str(e)}")
-
-    return render_template("index.html")
+@app.route("/download/<path:filename>")
+def download(filename):
+    file_path = os.path.join(DOWNLOAD_FOLDER, filename)
+    if os.path.exists(file_path):
+        return send_file(file_path, as_attachment=True)
+    return "Arquivo não encontrado!", 404
 
 if __name__ == "__main__":
     app.run(debug=True)
